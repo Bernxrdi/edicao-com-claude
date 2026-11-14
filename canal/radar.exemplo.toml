@@ -1,0 +1,9 @@
+# O robô do grupo do WhatsApp (canal/scripts/radar.py). A /entrevista copia este arquivo pra radar.toml.
+# Pode editar à vontade; vale na próxima rodada.
+
+# O nome do grupo, igual ao que aparece no WhatsApp do Mac. O robô lê só este grupo, só leitura.
+grupo_whatsapp = "Criação de Conteúdo"
+# Quantos dias pra trás o robô olha (o que já entrou na pilha não entra de novo).
+dias_grupo = 14
+# De quanto em quanto tempo ele roda, depois de `uv run canal/scripts/radar.py instalar`.
+intervalo_minutos = 30

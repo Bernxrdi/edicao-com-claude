@@ -1,0 +1,74 @@
+<!doctype html>
+<!--
+  Thumb do canal (1280x720), marca pessoal v2, tema escuro.
+  Quem preenche é o canal.py (comando thumbs); os {{...}} viram valor de cada variação.
+  Layout A: pessoa recortada sobre fundo Tinta liso. Layout B: cena inteira com painel Tinta sólido.
+  Layout C (18/10/2026): pessoa recortada no centro, duas cenas
+  do vídeo em preto e branco escurecido dos lados, frase grande embaixo.
+  Nunca: gradiente, sombra pesada, segunda cor de destaque. Padrões em contexto/padroes-titulo-thumb.md.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>thumb</title>
+<style>
+  @font-face { font-family: "Manrope"; font-weight: 300; src: url("{{FONTES}}/Manrope-Light.ttf"); }
+  @font-face { font-family: "Manrope"; font-weight: 600; src: url("{{FONTES}}/Manrope-SemiBold.ttf"); }
+  @font-face { font-family: "Manrope"; font-weight: 800; src: url("{{FONTES}}/Manrope-ExtraBold.ttf"); }
+
+  :root { --tinta: #0B0B0B; --papel: #F6F5F2; --azul: #86B6EF; --discreto: #85837D; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 720px; overflow: hidden; background: var(--tinta); }
+
+  .thumb { position: relative; width: 1280px; height: 720px; overflow: hidden;
+           font-family: "Manrope", sans-serif; color: var(--papel); background: var(--tinta); }
+  .imagem { position: absolute; display: block; }
+  .painel { position: absolute; top: 0; bottom: 0; width: {{LARGURA_TEXTO}}px; background: var(--tinta); }
+  .texto { position: absolute; top: 0; bottom: 0; width: {{LARGURA_TEXTO}}px; padding: 52px 0 60px;
+           display: flex; flex-direction: column; justify-content: space-between; }
+  .rotulo { font-weight: 600; font-size: 22px; letter-spacing: 0.14em; text-transform: uppercase;
+            color: var(--discreto); }
+  .frase { font-weight: 300; font-size: {{TAMANHO}}px; line-height: 1.02; letter-spacing: -0.03em; }
+  .frase strong { font-weight: 800; color: var(--azul); }
+
+  /* pessoa à direita, texto à esquerda (e o espelho) */
+  .direita .texto { left: 60px; }
+  .direita .painel { left: 0; }
+  .esquerda .texto { right: 60px; text-align: right; }
+  .esquerda .painel { right: 0; }
+
+  /* A: recorte sobre fundo liso */
+  .A .painel { display: none; }
+  .A .imagem { bottom: 0; width: {{LARGURA_IMAGEM}}px; height: {{ALTURA_RECORTE}}%; object-fit: contain; }
+  .A.direita .imagem { right: 40px; object-position: right bottom; }
+  .A.esquerda .imagem { left: 40px; object-position: left bottom; }
+
+  /* A com fundo (19/10/2026): a cena do vídeo desfocada e escurecida atrás do recorte, em vez do tinta liso */
+  .fundo-cena { position: absolute; inset: -40px; width: 1360px; height: 800px; object-fit: cover;
+                filter: blur(26px) brightness(0.32) saturate(1.1); }
+  .A .imagem { filter: drop-shadow(0 0 1px rgba(0,0,0,0.6)); }
+
+  /* C: recorte no centro, cenas do vídeo em preto e branco dos lados, frase embaixo */
+  .fundo { position: absolute; top: 0; height: 720px; width: 660px; object-fit: cover;
+           filter: grayscale(1) brightness(0.4) contrast(1.15); }
+  .f1 { left: 0; } .f2 { right: 0; }
+  .C .painel { display: none; }
+  .C .imagem { left: 50%; transform: translateX(-50%); bottom: 0; height: {{ALTURA_RECORTE}}%; width: auto; }
+  .C .texto { left: 0; right: 0; width: auto; padding: 38px 0 40px; align-items: center; text-align: center; }
+  .C .frase { letter-spacing: -0.035em; }
+  .C .rotulo { position: absolute; top: 34px; left: 44px; }
+  .C .texto { justify-content: flex-end; }
+</style>
+</head>
+<body>
+  <div class="thumb {{CLASSES}}">
+    {{FUNDOS}}
+    <img class="imagem" src="{{IMAGEM}}" style="{{IMG_ESTILO}}" alt="">
+    <div class="painel"></div>
+    <div class="texto">
+      <div class="rotulo">__ARROBA__</div>
+      <div class="frase">{{FRASE}}</div>
+    </div>
+  </div>
+</body>
+</html>

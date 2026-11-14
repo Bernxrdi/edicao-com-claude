@@ -1,0 +1,127 @@
+<!doctype html>
+<!-- "Se inscreve" do fim da abertura do vlog (18/10/2026, pedido dele no vídeo de 14/10: a introzinha
+     "esmaecendo nesse vídeo e vai aparecendo um motionzinho falando pra se inscrever"). Motor próprio, com
+     fundo transparente (render.mjs --alfa): o véu escurece o vídeo dele por baixo, a frase entra, o cursor
+     toca no botão e ele vira "inscrito"; no fim o véu fecha no preto, pra cartela de hora que vem depois.
+     Montagem por cima do vídeo: scripts/inscreva.py. -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>inscreva</title>
+<style>
+  @font-face { font-family: Manrope; font-weight: 300; src: url(fontes/Manrope-Light.ttf); }
+  @font-face { font-family: Manrope; font-weight: 600; src: url(fontes/Manrope-SemiBold.ttf); }
+  @font-face { font-family: Manrope; font-weight: 800; src: url(fontes/Manrope-ExtraBold.ttf); }
+  html, body { margin: 0; background: transparent; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script src="motion.js"></script>
+<script>
+const COR = { tinta: '#0B0B0B', papel: '#F6F5F2', azul: '#86B6EF' };
+const FONTE = 'Manrope';
+window.DUR = 3.4;
+const FORMATOS = { '16x9': [1920, 1080], '16x9-4k': [3840, 2160] };
+const q = new URLSearchParams(location.search);
+const [W, H] = FORMATOS[q.get('formato') || '16x9-4k'];
+const L = { W, H, cx: W / 2, cy: H / 2, u: Math.min(W, H) / 1080 };
+const cv = document.getElementById('c');
+cv.width = W; cv.height = H;
+const g = cv.getContext('2d');
+window.pronto = Promise.all(['300', '600', '800'].map((p) => document.fonts.load(`${p} 64px ${FONTE}`)));
+
+const TOQUE = 1.55;                       // o clique no botão
+window.SONS = [{ t: 0.3, tipo: 'whoosh', vol: 0.3 }, { t: TOQUE, tipo: 'clique', vol: 0.8 }, { t: TOQUE + 0.12, tipo: 'pop', vol: 0.5 }];
+
+function frase(txt, x, y, tam, alpha) {
+  const partes = txt.split(/(\*[^*]+\*)/).filter(Boolean).map((p) => {
+    const chave = p.startsWith('*'); const s = chave ? p.slice(1, -1) : p;
+    g.font = `${chave ? 800 : 300} ${tam}px ${FONTE}`;
+    return { s, chave, w: g.measureText(s).width };
+  });
+  let px = x - partes.reduce((a, m) => a + m.w, 0) / 2;
+  g.globalAlpha = alpha; g.textBaseline = 'middle'; g.textAlign = 'left';
+  for (const m of partes) {
+    g.font = `${m.chave ? 800 : 300} ${tam}px ${FONTE}`;
+    g.fillStyle = m.chave ? COR.azul : COR.papel;
+    g.fillText(m.s, px, y); px += m.w;
+  }
+  g.globalAlpha = 1;
+}
+function cursor(x, y, aperto) {
+  g.save(); g.translate(x, y); g.scale(1 - aperto * 0.15, 1 - aperto * 0.15);
+  g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 46 * L.u); g.lineTo(13 * L.u, 34 * L.u); g.lineTo(32 * L.u, 34 * L.u); g.closePath();
+  g.fillStyle = COR.papel; g.strokeStyle = COR.tinta; g.lineWidth = 3 * L.u; g.fill(); g.stroke();
+  g.restore();
+}
+
+function desenha(t) {
+  g.clearRect(0, 0, W, H);
+  // o véu: escurece o vídeo dele (esmaece) e, no fim, fecha no preto
+  const veu = Math.min(1, 0.66 * M.clamp(t / 0.45) + 0.34 * M.clamp((t - 2.95) / 0.4));
+  g.fillStyle = `rgba(11,11,11,${veu})`; g.fillRect(0, 0, W, H);
+
+  const s = M.sai(t, 2.75, 0.22);
+  // a frase
+  const e1 = M.entra(t, 0.3, { tipo: 'pesada', dist: 40 * L.u, blur: 12 * L.u });
+  g.save(); g.filter = e1.blur > 0.3 ? `blur(${e1.blur}px)` : 'none';
+  frase('se inscreve no *canal*', L.cx, L.cy - 120 * L.u + e1.y + s.y, 96 * L.u, Math.min(e1.alpha, s.alpha));
+  g.restore();
+
+  // o botão: pílula clara "inscrever-se" → toque → azul, "inscrito" com o check
+  const e2 = M.entra(t, 0.5, { tipo: 'padrao', dist: 30 * L.u, blur: 10 * L.u });
+  const larg = M.track(t, [[0, 520 * L.u], [TOQUE, 440 * L.u]], 'ui');
+  const pc = M.track(t, [[0, 0], [TOQUE, 1]], 'padrao');
+  const by = L.cy + 70 * L.u + e2.y + s.y, bh = 124 * L.u;
+  const aperto = Math.max(0, 1 - Math.abs(t - TOQUE) * 9);
+  const esc = 1 - aperto * 0.05;
+  g.save();
+  g.globalAlpha = Math.min(e2.alpha, s.alpha);
+  g.filter = e2.blur > 0.3 ? `blur(${e2.blur}px)` : 'none';
+  g.translate(L.cx, by); g.scale(esc, esc);
+  const mix = (a, b, p) => {
+    const n = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const [x, y] = [n(a), n(b)];
+    return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * M.clamp(p))).join(',')})`;
+  };
+  g.beginPath(); g.roundRect(-larg / 2, -bh / 2, larg, bh, bh / 2); g.fillStyle = mix(COR.papel, COR.azul, pc); g.fill();
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = COR.tinta;
+  g.font = `800 ${46 * L.u}px ${FONTE}`;
+  const base = g.globalAlpha;
+  let a = 1 - M.clamp((t - TOQUE) / 0.08);              // some no toque
+  g.globalAlpha = base * a; g.fillText('inscrever-se', 0, 2 * L.u);
+  a = M.clamp((t - TOQUE - 0.06) / 0.1);                 // e o novo entra logo depois
+  g.globalAlpha = base * a;
+  g.fillText('inscrito', 22 * L.u, 2 * L.u);
+  // o check, desenhado em traço
+  const k = M.clamp((t - TOQUE - 0.12) / 0.25);
+  if (k > 0) {
+    g.strokeStyle = COR.tinta; g.lineWidth = 9 * L.u; g.lineCap = 'round'; g.lineJoin = 'round';
+    const pts = [[-150, 0], [-130, 20], [-96, -18]].map(([x, y]) => [x * L.u, y * L.u]);
+    g.beginPath(); g.moveTo(...pts[0]);
+    if (k < 0.4) g.lineTo(pts[0][0] + (pts[1][0] - pts[0][0]) * k / 0.4, pts[0][1] + (pts[1][1] - pts[0][1]) * k / 0.4);
+    else { g.lineTo(...pts[1]); const r = (k - 0.4) / 0.6; g.lineTo(pts[1][0] + (pts[2][0] - pts[1][0]) * r, pts[1][1] + (pts[2][1] - pts[1][1]) * r); }
+    g.stroke();
+  }
+  g.restore();
+
+  // o cursor conduz o toque e sai logo de cima do botão
+  if (t > 0.9 && t < 2.6) {
+    const cx = M.track(t, [[0.9, L.cx + 520 * L.u], [1.05, L.cx + 120 * L.u], [TOQUE + 0.25, L.cx + 360 * L.u]], 'ui');
+    const cy = M.track(t, [[0.9, L.cy + 480 * L.u], [1.05, L.cy + 90 * L.u], [TOQUE + 0.25, L.cy + 300 * L.u]], 'ui');
+    g.globalAlpha = Math.min(M.clamp((t - 0.9) * 6), s.alpha);
+    cursor(cx, cy, aperto);
+    g.globalAlpha = 1;
+  }
+}
+window.seek = (t) => { desenha(t); return true; };
+
+if (!q.has('render')) window.pronto.then(() => {
+  const t0 = performance.now();
+  (function loop() { desenha(((performance.now() - t0) / 1000) % window.DUR); requestAnimationFrame(loop); })();
+});
+</script>
+</body>
+</html>

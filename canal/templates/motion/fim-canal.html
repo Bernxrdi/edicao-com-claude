@@ -1,0 +1,163 @@
+<!doctype html>
+<!-- Fim do vídeo do canal (18/10/2026, pedido dele: "no final, um motion mais personalizado, mostrando o
+     Instagram e o canal no YouTube, chamando pra se inscrever e acompanhar os próximos vídeos").
+     Motor próprio, fundo tinta. A foto de perfil (assets/perfil.png, do perfil/foto.png) entra num
+     círculo, o nome e a frase sobem, os dois botões aparecem e o cursor toca em cada um: o do canal vira
+     "inscrito", o do Instagram vira "seguindo". O lado direito fica livre pros elementos da tela final do YouTube.
+     Render: scripts/cartela.py <ep> fim-canal fim. -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>fim</title>
+<style>
+  @font-face { font-family: Manrope; font-weight: 300; src: url(fontes/Manrope-Light.ttf); }
+  @font-face { font-family: Manrope; font-weight: 600; src: url(fontes/Manrope-SemiBold.ttf); }
+  @font-face { font-family: Manrope; font-weight: 800; src: url(fontes/Manrope-ExtraBold.ttf); }
+  html, body { margin: 0; background: #0B0B0B; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script src="motion.js"></script>
+<script>
+const COR = { tinta: '#0B0B0B', papel: '#F6F5F2', azul: '#86B6EF', linha: 'rgba(246,245,242,0.22)' };
+const FONTE = 'Manrope';
+window.DUR = 9.0;
+const FORMATOS = { '16x9': [1920, 1080], '16x9-4k': [3840, 2160] };
+const q = new URLSearchParams(location.search);
+const [W, H] = FORMATOS[q.get('formato') || '16x9-4k'];
+const u = Math.min(W, H) / 1080;
+const cv = document.getElementById('c');
+cv.width = W; cv.height = H;
+const g = cv.getContext('2d');
+const foto = new Image(); foto.src = 'assets/perfil.png';
+window.pronto = Promise.all([...['300', '600', '800'].map((p) => document.fonts.load(`${p} 64px ${FONTE}`)),
+  new Promise((ok) => { foto.onload = ok; foto.onerror = ok; })]);
+
+const CX = W * 0.34;                         // coluna da esquerda; a direita fica pra tela final do YouTube
+const TOQUE1 = 3.2, TOQUE2 = 4.6;
+
+function frase(txt, x, y, tam, alpha) {
+  const partes = txt.split(/(\*[^*]+\*)/).filter(Boolean).map((p) => {
+    const chave = p.startsWith('*'); const s = chave ? p.slice(1, -1) : p;
+    g.font = `${chave ? 800 : 300} ${tam}px ${FONTE}`;
+    return { s, chave, w: g.measureText(s).width };
+  });
+  let px = x - partes.reduce((a, m) => a + m.w, 0) / 2;
+  g.globalAlpha = alpha; g.textBaseline = 'middle'; g.textAlign = 'left';
+  for (const m of partes) {
+    g.font = `${m.chave ? 800 : 300} ${tam}px ${FONTE}`;
+    g.fillStyle = m.chave ? COR.azul : COR.papel;
+    g.fillText(m.s, px, y); px += m.w;
+  }
+  g.globalAlpha = 1;
+}
+const mix = (a, b, p) => {
+  const n = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const [x, y] = [n(a), n(b)];
+  return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * M.clamp(p))).join(',')})`;
+};
+function iconeYoutube(x, y, s, cor) {             // retângulo arredondado com o play
+  g.save(); g.translate(x, y); g.strokeStyle = cor; g.fillStyle = cor; g.lineWidth = 4 * u;
+  g.beginPath(); g.roundRect(-s * 0.7, -s * 0.5, s * 1.4, s, s * 0.28); g.stroke();
+  g.beginPath(); g.moveTo(-s * 0.16, -s * 0.24); g.lineTo(s * 0.26, 0); g.lineTo(-s * 0.16, s * 0.24); g.closePath(); g.fill();
+  g.restore();
+}
+function iconeInstagram(x, y, s, cor) {           // quadrado arredondado, lente e o pontinho
+  g.save(); g.translate(x, y); g.strokeStyle = cor; g.fillStyle = cor; g.lineWidth = 4 * u;
+  g.beginPath(); g.roundRect(-s * 0.55, -s * 0.55, s * 1.1, s * 1.1, s * 0.32); g.stroke();
+  g.beginPath(); g.arc(0, 0, s * 0.25, 0, Math.PI * 2); g.stroke();
+  g.beginPath(); g.arc(s * 0.3, -s * 0.3, s * 0.06, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+function botao(t, x, y, ent, toque, icone, antes, depois) {
+  const e = M.entra(t, ent, { tipo: 'padrao', dist: 26 * u, blur: 10 * u });
+  const pc = M.track(t, [[0, 0], [toque, 1]], 'padrao');
+  const aperto = Math.max(0, 1 - Math.abs(t - toque) * 9);
+  const larg = 660 * u, alt = 112 * u, esc = 1 - aperto * 0.05;
+  g.save(); g.globalAlpha = e.alpha; g.filter = e.blur > 0.3 ? `blur(${e.blur}px)` : 'none';
+  g.translate(x, y + e.y); g.scale(esc, esc);
+  g.beginPath(); g.roundRect(-larg / 2, -alt / 2, larg, alt, alt / 2);
+  g.fillStyle = mix('#1A1A19', COR.azul, pc); g.fill();
+  g.strokeStyle = pc < 0.5 ? COR.linha : 'rgba(0,0,0,0)'; g.lineWidth = 2 * u; g.stroke();
+  const corTexto = mix(COR.papel, COR.tinta, pc);
+  icone(-larg / 2 + 70 * u, 0, 40 * u, corTexto);
+  g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillStyle = corTexto;
+  g.font = `800 ${38 * u}px ${FONTE}`;
+  const base = g.globalAlpha;
+  g.globalAlpha = base * (1 - M.clamp((t - toque) / 0.08)); g.fillText(antes, -larg / 2 + 128 * u, 2 * u);
+  g.globalAlpha = base * M.clamp((t - toque - 0.06) / 0.1); g.fillText(depois, -larg / 2 + 128 * u, 2 * u);
+  g.restore();
+}
+function cursor(x, y, aperto) {
+  g.save(); g.translate(x, y); g.scale(1 - aperto * 0.15, 1 - aperto * 0.15);
+  g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 46 * u); g.lineTo(13 * u, 34 * u); g.lineTo(32 * u, 34 * u); g.closePath();
+  g.fillStyle = COR.papel; g.strokeStyle = COR.tinta; g.lineWidth = 3 * u; g.fill(); g.stroke();
+  g.restore();
+}
+
+function desenha(t) {
+  g.fillStyle = COR.tinta; g.fillRect(0, 0, W, H);
+  const fecha = M.clamp((t - 8.5) / 0.5);          // fecha no preto no último meio segundo
+
+  // a foto de perfil, num círculo com o fio azul
+  const ef = M.entra(t, 0.2, { tipo: 'pesada', dist: 30 * u, blur: 14 * u });
+  const r = 150 * u * (0.9 + 0.1 * ef.p), fy = H * 0.2 + ef.y;
+  g.save(); g.globalAlpha = ef.alpha; g.filter = ef.blur > 0.3 ? `blur(${ef.blur}px)` : 'none';
+  g.beginPath(); g.arc(CX, fy, r, 0, Math.PI * 2); g.closePath(); g.save(); g.clip();
+  if (foto.naturalWidth) {
+    const lado = Math.min(foto.naturalWidth, foto.naturalHeight);
+    g.drawImage(foto, (foto.naturalWidth - lado) / 2, (foto.naturalHeight - lado) / 2, lado, lado, CX - r, fy - r, r * 2, r * 2);
+  } else { g.fillStyle = '#222'; g.fill(); }
+  g.restore();
+  g.strokeStyle = COR.azul; g.lineWidth = 4 * u;
+  const arco = M.clamp((t - 0.5) / 0.7);
+  g.beginPath(); g.arc(CX, fy, r + 12 * u, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * M.mola(arco * 1.2, 'padrao')); g.stroke();
+  g.restore();
+
+  // o nome e a frase
+  const en = M.entra(t, 0.6, { tipo: 'pesada', dist: 34 * u, blur: 12 * u });
+  g.save(); g.filter = en.blur > 0.3 ? `blur(${en.blur}px)` : 'none';
+  g.globalAlpha = en.alpha; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = COR.papel; g.font = `800 ${74 * u}px ${FONTE}`;
+  g.fillText('__NOME__', CX, H * 0.2 + 240 * u + en.y);
+  g.globalAlpha = en.alpha * 0.6; g.font = `600 ${34 * u}px ${FONTE}`;
+  g.letterSpacing = `${0.12 * 34 * u}px`;
+  g.fillText('__ARROBA_MAIUSC__', CX + 0.06 * 34 * u, H * 0.2 + 310 * u + en.y);
+  g.letterSpacing = '0px';
+  g.restore();
+  const e3 = M.entra(t, 1.1, { tipo: 'pesada', dist: 30 * u, blur: 12 * u });
+  g.save(); g.filter = e3.blur > 0.3 ? `blur(${e3.blur}px)` : 'none';
+  frase('acompanha os *próximos vídeos*', CX, H * 0.2 + 420 * u + e3.y, 54 * u, e3.alpha);
+  g.restore();
+
+  // os dois botões, um embaixo do outro
+  const by = H * 0.2 + 560 * u;
+  botao(t, CX, by, 1.7, TOQUE1, iconeYoutube, 'se inscreve no canal', 'inscrito');
+  botao(t, CX, by + 140 * u, 1.9, TOQUE2, iconeInstagram, 'segue no instagram', 'seguindo');
+
+  // o cursor toca no primeiro, depois no segundo, e sai de cima
+  if (t > 2.5 && t < 6.2) {
+    const k = [[2.5, CX + 700 * u], [2.7, CX + 120 * u], [TOQUE1 + 0.3, CX + 150 * u], [TOQUE2 + 0.3, CX + 600 * u]];
+    const ky = [[2.5, by + 420 * u], [2.7, by + 10 * u], [TOQUE1 + 0.3, by + 150 * u], [TOQUE2 + 0.3, by + 420 * u]];
+    const aperto = Math.max(0, 1 - Math.abs(t - TOQUE1) * 9, 1 - Math.abs(t - TOQUE2) * 9);
+    g.globalAlpha = M.clamp((t - 2.5) * 6) * (1 - M.clamp((t - 5.6) / 0.4));
+    cursor(M.track(t, k, 'ui'), M.track(t, ky, 'ui'), aperto);
+    g.globalAlpha = 1;
+  }
+
+  // grão leve e o fecho no preto
+  const rr = M.rng(Math.floor(t * 60) + 3); g.fillStyle = 'rgba(255,255,255,0.02)';
+  for (let i = 0; i < 2400; i++) g.fillRect(rr() * W, rr() * H, 2 * u, 2 * u);
+  if (fecha > 0) { g.fillStyle = `rgba(11,11,11,${fecha})`; g.fillRect(0, 0, W, H); }
+}
+window.seek = (t) => { desenha(t); return true; };
+
+if (!q.has('render')) window.pronto.then(() => {
+  const t0 = performance.now();
+  (function loop() { desenha(((performance.now() - t0) / 1000) % window.DUR); requestAnimationFrame(loop); })();
+});
+</script>
+</body>
+</html>

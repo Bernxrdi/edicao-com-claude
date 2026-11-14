@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>__TITULO__</title>
+    <!-- Modelo base dos reels 9:16 (09/10/2026). O vídeo dele, a legenda queimada e, quando o
+         trecho pede, cenas cheias de motion (#cena). Por cima do rosto NUNCA vai caixa de texto (ele não gostou,
+         09/10/2026): só a legenda. Cada reel traz as cenas dele em episodios/<ep>/motion-fonte/ (cenas.html e
+         roteiro.js); o montar-motion.py junta tudo aqui. T.<deixa> = início da palavra na base, F.<deixa> = fim.
+         Linguagem das cenas (da referência de 08/10, adaptada à marca): fundo tinta com formas desfocadas boiando,
+         cartões de vidro, palavra-chave montando letra por letra, cursor clicando, número subindo. -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Manrope"; font-weight: 300; src: url("assets/fontes/Manrope-Light.ttf"); }
+      @font-face { font-family: "Manrope"; font-weight: 600; src: url("assets/fontes/Manrope-SemiBold.ttf"); }
+      @font-face { font-family: "Manrope"; font-weight: 800; src: url("assets/fontes/Manrope-ExtraBold.ttf"); }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1080px; height: 1920px; overflow: hidden; background: #0b0b0b; }
+      #root { position: relative; width: 1080px; height: 1920px; overflow: hidden; font-family: "Manrope", sans-serif; color: #f6f5f2; }
+
+      /* rosto: o punch-in é escala em volta do rosto. A parede de cima sobra: o vídeo sobe 140 px pra legenda
+         ficar no peito, a 620 px do pé (fora da faixa da interface do Reels) */
+      #rosto { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; transform-origin: 540px 800px; }
+      #rosto video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 0%; transform: translateY(-140px) scale(1.08); }
+
+      /* cena cheia: entra como um cartão que abre do centro */
+      #cena { position: absolute; inset: 0; background: #0b0b0b; opacity: 0; clip-path: inset(38% 7% 38% 7% round 70px); }
+      .forma { position: absolute; border-radius: 999px; background: #0e2e56; }
+      .grupo { position: absolute; inset: 0; opacity: 0; }
+
+      /* frase de arte: caixa baixa, leve, palavra-chave em 800 no azul claro */
+      .frase { font-weight: 300; letter-spacing: -0.035em; line-height: 1.06; color: #f6f5f2; text-align: center; }
+      .frase b { font-weight: 800; color: #86b6ef; }
+      .frase .l { display: block; overflow: hidden; padding-bottom: 0.12em; margin-bottom: -0.12em; }
+      .frase .p { display: block; }
+      .frase .letra { display: inline-block; }
+      .titulo { position: absolute; left: 60px; top: 230px; width: 960px; font-size: 92px; }
+
+      /* cartões de vidro escuro */
+      .cartao { position: absolute; background: #141413; border: 1.5px solid rgba(246, 245, 242, 0.09); border-radius: 44px;
+                box-shadow: 0 40px 80px -40px rgba(0, 0, 0, 0.8); overflow: hidden; }
+      .rotulo { font-weight: 600; font-size: 25px; letter-spacing: 0.09em; text-transform: uppercase; color: #85837d; }
+      .ico { width: 84px; height: 84px; border-radius: 26px; background: #0e2e56; display: grid; place-items: center; flex: none; color: #86b6ef; }
+      .ico svg, .ava svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .ico svg { width: 46px; height: 46px; }
+      .num { font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+      .ok { width: 54px; height: 54px; border-radius: 50%; background: #1c5cab; display: grid; place-items: center; color: #f6f5f2; }
+      .ok svg { width: 32px; height: 32px; fill: none; stroke: currentColor; stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
+
+      /* chat */
+      .cab { position: absolute; left: 0; top: 0; width: 100%; height: 112px; display: flex; align-items: center; gap: 20px; padding: 0 34px;
+             border-bottom: 1.5px solid rgba(246, 245, 242, 0.07); }
+      .ava { width: 64px; height: 64px; border-radius: 50%; background: #262624; display: grid; place-items: center; color: #b5b3ad; }
+      .ava svg { width: 34px; height: 34px; }
+      .nome { font-weight: 600; font-size: 34px; color: #f6f5f2; }
+      .corpo { position: absolute; left: 0; top: 112px; width: 100%; bottom: 0; overflow: hidden; }
+      .rolo { position: absolute; left: 0; top: 0; width: 100%; }
+      .msg { position: absolute; max-width: 660px; padding: 24px 32px 26px; border-radius: 34px; font-weight: 400; font-size: 46px; line-height: 1.22;
+             letter-spacing: -0.01em; opacity: 0; }
+      .msg.dele { left: 34px; background: #242422; color: #f6f5f2; border-bottom-left-radius: 10px; }
+      .msg.meu { right: 34px; background: #1c5cab; color: #f6f5f2; border-bottom-right-radius: 10px; }
+      .lidas { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 8px; font-size: 24px; font-weight: 600; color: #a4bedd; }
+      .lidas svg { width: 32px; height: 32px; fill: none; stroke: #86b6ef; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+      .digitando { position: absolute; left: 34px; width: 132px; height: 70px; border-radius: 35px; background: #242422; opacity: 0;
+                   display: flex; align-items: center; justify-content: center; gap: 12px; border-bottom-left-radius: 10px; }
+      .digitando i { width: 14px; height: 14px; border-radius: 50%; background: #85837d; display: block; }
+      .campo { position: absolute; left: 30px; right: 30px; bottom: 26px; min-height: 92px; border-radius: 46px; background: #1d1d1c; border: 1.5px solid rgba(246, 245, 242, 0.08);
+               padding: 22px 120px 22px 34px; font-size: 34px; line-height: 1.25; color: #f6f5f2; }
+      .campo .ph { position: absolute; left: 34px; top: 25px; color: #52514e; }
+      .enviar { position: absolute; right: 14px; bottom: 12px; width: 68px; height: 68px; border-radius: 50%; background: #1c5cab; display: grid; place-items: center; }
+      .enviar svg { width: 36px; height: 36px; fill: none; stroke: #f6f5f2; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+      .c { opacity: 0; }
+      #cursor { position: absolute; left: 0; top: 0; width: 64px; height: 64px; opacity: 0; }
+      #anel { position: absolute; left: 0; top: 0; width: 110px; height: 110px; margin: -55px 0 0 -55px; border-radius: 50%; border: 4px solid #86b6ef; opacity: 0; }
+
+      /* legenda: a fala dele em blocos curtos, sobre o suéter escuro */
+      #legendas { position: absolute; left: 0; top: 1210px; width: 1080px; height: 130px; }
+      .leg { position: absolute; left: 0; top: 0; width: 1080px; text-align: center; font-weight: 800; font-size: 86px; letter-spacing: -0.02em; line-height: 1.1;
+             color: #f6f5f2; opacity: 0; white-space: nowrap;
+             text-shadow: 0 0 3px #0b0b0b, 2px 2px 0 #0b0b0b, -2px 2px 0 #0b0b0b, 2px -2px 0 #0b0b0b, -2px -2px 0 #0b0b0b, 0 6px 24px rgba(11, 11, 11, 0.6); }
+      .leg .k { color: #86b6ef; }
+
+      /* final em motion (09/10/2026): pede a curtida e o compartilhamento, com a assinatura dele */
+      .fim-icones { position: absolute; left: 0; width: 1080px; top: 560px; display: flex; justify-content: center; gap: 56px; }
+      .fim-ico { width: 216px; height: 216px; border-radius: 62px; opacity: 0; }
+      .fim-ico svg { width: 116px; height: 116px; }
+      #fimC svg { fill: #86b6ef; stroke: #86b6ef; }
+      #fimAss { position: absolute; left: 0; width: 1080px; top: 1120px; text-align: center; opacity: 0; color: #b5b3ad; font-size: 38px; letter-spacing: 0.06em; }
+/*__CSS__*/
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="reel" data-start="0" data-duration="__DUR__" data-width="1080" data-height="1920">
+      <div id="rosto">
+        <video id="video-rosto" class="clip" src="assets/rosto.mp4" muted playsinline data-start="0" data-duration="__DURV__" data-track-index="0"></video>
+      </div>
+      <div id="cena">
+        <div id="formas" data-layout-allow-overlap></div>
+<!--__CENAS__-->
+        <div id="gFim" class="grupo">
+          <div class="fim-icones"><div id="fimC" class="ico fim-ico">__HEART__</div><div id="fimM" class="ico fim-ico">__PLANE__</div></div>
+          <div id="tFim" class="titulo frase" style="top: 860px">__FIM__</div>
+          <div id="fimAss" class="rotulo">__ARROBA__</div>
+        </div>
+        <div id="anel"></div>
+        <svg id="cursor" viewBox="0 0 24 24"><path d="M4 2.5 L19.5 13 L12.6 14.3 L16.4 21.2 L13.6 22.6 L9.9 15.6 L4.9 20.3 Z" fill="#f6f5f2" stroke="#0b0b0b" stroke-width="1.3" stroke-linejoin="round"/></svg>
+      </div>
+      <div id="legendas"></div>
+    </div>
+
+    <script>
+      const T = /*__T__*/ {};
+      const F = /*__F__*/ {};
+      const LEG = /*__LEG__*/ [];
+      const DUR = __DUR__;
+      const DURV = __DURV__; // fim da fala; o que passa disso é o final em motion
+      const $ = (id) => document.getElementById(id);
+      const el = (tag, attrs = {}, html = "") => { const e = document.createElement(tag); for (const [a, v] of Object.entries(attrs)) e.setAttribute(a, v); e.innerHTML = html; return e; };
+      const t = (nome, d = 0) => { if (!(nome in T)) throw new Error("deixa sem tempo: " + nome); return T[nome] + d; };
+      const f = (nome, d = 0) => { if (!(nome in F)) throw new Error("deixa sem tempo: " + nome); return F[nome] + d; };
+      let semente = 7;
+      const rnd = () => { semente = (semente * 16807) % 2147483647; return (semente - 1) / 2147483646; };
+      const tl = gsap.timeline({ paused: true });
+      const ACESO = { borderColor: "rgba(134, 182, 239, 0.75)", boxShadow: "0 0 0 6px rgba(134, 182, 239, 0.12), 0 40px 80px -40px rgba(0, 0, 0, 0.8)" };
+      const APAGADO = { borderColor: "rgba(246, 245, 242, 0.09)", boxShadow: "0 0 0 0px rgba(134, 182, 239, 0), 0 40px 80px -40px rgba(0, 0, 0, 0.8)" };
+
+      // ------------------------------------------------------------ peças
+      // entrada com estado de partida marcado com set (vale em qualquer ordem de busca do render)
+      function entra(sel, de, para, quando, dura = 0.5, ease = "expo.out") { tl.set(sel, de, quando).to(sel, { ...para, duration: dura, ease }, quando + 0.001); }
+      function sai(sel, quando, dura = 0.3, para = { opacity: 0 }) { tl.to(sel, { ...para, duration: dura, ease: "power2.in" }, quando); }
+      function linhas(sel, quando, passo = 0.12) {
+        document.querySelectorAll(sel + " .p").forEach((p, i) => entra(p, { yPercent: 110 }, { yPercent: 0 }, quando + i * passo, 0.7));
+      }
+      // a palavra-chave se monta letra por letra, escondida até a palavra ser dita
+      function monta(id, quando, espalha = 1) {
+        const e = $(id);
+        e.innerHTML = [...e.textContent].map((c) => `<span class="letra">${c}</span>`).join("");
+        e.querySelectorAll(".letra").forEach((l, i) => {
+          const de = { opacity: 0, x: (rnd() - 0.5) * 260 * espalha, y: (rnd() - 0.5) * 200 * espalha, rotation: (rnd() - 0.5) * 90, filter: "blur(10px)" };
+          tl.set(l, de, 0);
+          entra(l, de, { opacity: 1, x: 0, y: 0, rotation: 0, filter: "blur(0px)" }, quando + i * 0.025, 0.65);
+        });
+      }
+      function conta(alvo, de, ate, quando, dura, fmt = (v) => Math.round(v)) {
+        const o = { v: de };
+        tl.fromTo(o, { v: de }, { v: ate, duration: dura, ease: "power2.out", immediateRender: false, onUpdate: () => { $(alvo).textContent = fmt(o.v); } }, quando);
+      }
+      function pop(sel, quando, dura = 0.5) { entra(sel, { opacity: 0, y: 34, scale: 0.86 }, { opacity: 1, y: 0, scale: 1 }, quando, dura, "back.out(1.8)"); }
+      function acende(sel, quando) { tl.to(sel, { ...ACESO, duration: 0.3, ease: "power2.out" }, quando); }
+      function apaga(sel, quando) { tl.to(sel, { ...APAGADO, duration: 0.3, ease: "power2.out" }, quando); }
+      // cena cheia: abre como um cartão do centro; ao sair, fecha de volta e o rosto aparece
+      function cena(grupo, de, ate) {
+        const grupos = [...document.querySelectorAll("#cena .grupo")].map((g) => "#" + g.id);
+        tl.set("#cena", { opacity: 1, clipPath: "inset(38% 7% 38% 7% round 70px)" }, de)
+          .to("#cena", { clipPath: "inset(0% 0% 0% 0% round 0px)", duration: de === 0 ? 0.01 : 0.55, ease: "expo.inOut" }, de + 0.001);
+        grupos.forEach((g) => tl.set(g, { opacity: g === grupo ? 1 : 0 }, de));
+        tl.to("#cena", { clipPath: "inset(47% 24% 47% 24% round 70px)", opacity: 0, duration: 0.4, ease: "power3.in" }, ate - 0.4)
+          .set(grupo, { opacity: 0 }, ate);
+      }
+      function zoom(escala, quando) { tl.set("#rosto", { scale: escala }, quando); }
+      function digita(alvo, texto, de, ate) {
+        const e = $(alvo);
+        e.innerHTML = [...texto].map((c) => `<span class="c">${c}</span>`).join("");
+        const cs = [...e.querySelectorAll(".c")];
+        cs.forEach((c, i) => tl.set(c, { opacity: 1 }, de + ((ate - de) * i) / cs.length));
+      }
+      function pontos(sel, de, ate) { // os três pontinhos de "digitando"
+        document.querySelectorAll(sel + " i").forEach((p, i) => {
+          for (let k = de + i * 0.12; k < ate - 0.3; k += 0.6) tl.to(p, { y: -10, duration: 0.15, ease: "sine.out" }, k).to(p, { y: 0, duration: 0.15, ease: "sine.in" }, k + 0.15);
+        });
+      }
+      function clica(x, y, chega, clique) { // cursor vai até (x, y) e clica
+        entra("#cursor", { opacity: 0, x: x + 60, y: y + 300 }, { opacity: 1, x: x + 20, y: y + 200 }, chega, 0.3);
+        tl.to("#cursor", { x: x - 11, y: y - 7, duration: 0.55, ease: "power3.inOut" }, chega + 0.3);
+        tl.to("#cursor", { scale: 0.86, duration: 0.08, yoyo: true, repeat: 1 }, clique);
+        entra("#anel", { opacity: 1, x, y, scale: 0.4 }, { opacity: 0, scale: 1.5 }, clique, 0.5, "power2.out");
+        tl.to("#cursor", { opacity: 0, duration: 0.3 }, clique + 0.4);
+      }
+
+      // fundo das cenas: formas desfocadas boiando
+      for (let i = 0; i < 11; i++) {
+        const w = 120 + rnd() * 220, h = w * (0.34 + rnd() * 0.2);
+        const d = el("div", { class: "forma", style: `left:${rnd() * 1080 - w / 2}px;top:${rnd() * 1920}px;width:${w}px;height:${h}px;` +
+          `filter:blur(${6 + rnd() * 22}px);opacity:${0.35 + rnd() * 0.45};transform:rotate(${(rnd() - 0.5) * 80}deg)` });
+        $("formas").appendChild(d);
+        tl.to(d, { y: -260 - rnd() * 260, rotation: "+=" + ((rnd() - 0.5) * 50), duration: DUR, ease: "none" }, 0);
+      }
+      zoom(1.0, 0);
+
+      // ------------------------------------------------------------ roteiro do reel
+/*__ROTEIRO__*/
+
+      // ------------------------------------------------------------ final em motion (quando o reel tem "outro")
+      if (DUR - DURV > 0.5) {
+        cena("#gFim", DURV - 0.05, DUR + 1);
+        tl.set("#cena", { opacity: 1 }, DURV + 0.001); // se uma cena acaba bem em DURV, o "sumir" dela não apaga o final
+        pop("#fimC", DURV + 0.15, 0.5);
+        pop("#fimM", DURV + 0.3, 0.5);
+        tl.set("#tFim .p", { yPercent: 110 }, 0);
+        linhas("#tFim", DURV + 0.35);
+        tl.to("#fimC", { scale: 1.14, duration: 0.14, yoyo: true, repeat: 3, ease: "power2.out" }, DURV + 1.0);
+        tl.to("#fimM", { x: 14, y: -14, duration: 0.25, yoyo: true, repeat: 1, ease: "power2.out" }, DURV + 1.3);
+        entra("#fimAss", { opacity: 0, y: 10 }, { opacity: 1, y: 0 }, DURV + 0.7, 0.5);
+      }
+
+      // ------------------------------------------------------------ legendas
+      LEG.forEach((b, i) => {
+        const d = el("div", { id: "lg" + i, class: "leg" }, b.p.map((w) => (w.k ? `<span class="k">${w.t}</span>` : w.t)).join(" "));
+        $("legendas").appendChild(d);
+        const fim = i + 1 < LEG.length ? Math.min(b.f + 0.25, LEG[i + 1].i - 0.02) : Math.min(b.f + 0.5, DURV);
+        entra(d, { opacity: 1, scale: 0.92 }, { scale: 1 }, b.i, 0.12, "power2.out");
+        tl.set(d, { opacity: 0 }, fim);
+      });
+      window.__timelines["reel"] = tl;
+    </script>
+  </body>
+</html>

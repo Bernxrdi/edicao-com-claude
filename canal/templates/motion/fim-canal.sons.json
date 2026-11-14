@@ -1,0 +1,3 @@
+[{"t": 0.25, "tipo": "whoosh", "vol": 0.3}, {"t": 0.7, "tipo": "pop", "vol": 0.35},
+ {"t": 3.2, "tipo": "clique", "vol": 0.8}, {"t": 3.32, "tipo": "pop", "vol": 0.5},
+ {"t": 4.6, "tipo": "clique", "vol": 0.8}, {"t": 4.72, "tipo": "pop", "vol": 0.5}]

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <!-- MODELO numero · rótulo pequeno + número grande + traço azul, do lado livre (aqui o direito; pro esquerdo,
+         troque right por left no #c01-bloco e 270deg por 90deg no véu). Testado no ensaio de 07/10/2026.
+         Trocar: o id c01 pelo da cartela (c04...), o texto, data-duration e os tempos do timeline. -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Manrope"; font-weight: 300; src: url("fontes/Manrope-Light.ttf"); }
+      @font-face { font-family: "Manrope"; font-weight: 600; src: url("fontes/Manrope-SemiBold.ttf"); }
+      @font-face { font-family: "Manrope"; font-weight: 800; src: url("fontes/Manrope-ExtraBold.ttf"); }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "Manrope", sans-serif; }
+      #c01-cena { position: absolute; inset: 0; }
+      #c01-veu {
+        position: absolute; inset: 0;
+        background: linear-gradient(270deg, rgba(11, 11, 11, 0.8) 0%, rgba(11, 11, 11, 0.58) 36%, rgba(11, 11, 11, 0) 66%);
+      }
+      #c01-bloco {
+        position: absolute; right: 180px; top: 0; bottom: 0; width: 640px;
+        display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+      }
+      .c01-mascara { display: block; overflow: hidden; }
+      #c01-rotulo {
+        display: block; color: #F6F5F2; opacity: 0.92;
+        font-weight: 600; font-size: 36px; letter-spacing: 0.16em; text-transform: uppercase;
+      }
+      #c01-numero {
+        display: block; color: #F6F5F2;
+        font-weight: 800; font-size: 220px; line-height: 1; letter-spacing: -0.04em;
+        font-variant-numeric: tabular-nums;
+      }
+      #c01-linha { display: block; width: 140px; height: 6px; margin-top: 28px; background: #86B6EF; transform-origin: left center; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="c01" data-start="0" data-duration="2.7" data-width="1920" data-height="1080">
+      <div id="c01-cena">
+        <div id="c01-veu"></div>
+        <div id="c01-bloco">
+          <span class="c01-mascara" data-layout-allow-overflow><span id="c01-rotulo">acordo às</span></span>
+          <span class="c01-mascara" data-layout-allow-overflow><span id="c01-numero">05:00</span></span>
+          <span id="c01-linha"></span>
+        </div>
+      </div>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#c01-veu", { opacity: 0 }, { opacity: 1, duration: 0.35, ease: "power2.out" }, 0)
+        .fromTo("#c01-rotulo", { yPercent: 110 }, { yPercent: 0, duration: 0.45, ease: "power3.out" }, 0.04)
+        .fromTo("#c01-numero", { yPercent: 105, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.6, ease: "expo.out" }, 0.06)
+        .fromTo("#c01-linha", { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: "power3.inOut" }, 0.35)
+        .to("#c01-bloco", { y: -24, opacity: 0, duration: 0.35, ease: "power2.in" }, 2.25)
+        .to("#c01-veu", { opacity: 0, duration: 0.35, ease: "power1.in" }, 2.3);
+      window.__timelines["c01"] = tl;
+    </script>
+  </body>
+</html>

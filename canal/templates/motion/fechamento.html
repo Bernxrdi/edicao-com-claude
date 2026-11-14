@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <!-- MODELO fechamento · a frase-soco no fim: o vídeo escurece inteiro (véu 0,74) e a frase entra no centro,
+         uma linha por palavra falada, e fica até o fim. Serve também quando não há lado livre no quadro.
+         Trocar: o id c03, as linhas, data-duration (até o fim do vídeo) e os tempos. -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Manrope"; font-weight: 300; src: url("fontes/Manrope-Light.ttf"); }
+      @font-face { font-family: "Manrope"; font-weight: 800; src: url("fontes/Manrope-ExtraBold.ttf"); }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "Manrope", sans-serif; }
+      #c03-cena { position: absolute; inset: 0; }
+      #c03-veu {
+        position: absolute; inset: 0;
+        background: rgba(11, 11, 11, 0.74);
+      }
+      #c03-bloco {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+      }
+      .c03-linha { display: block; white-space: nowrap; }
+      .c03-mascara { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: 0.08em; }
+      .c03-p { display: inline-block; color: #F6F5F2; font-weight: 300; font-size: 104px; line-height: 1.04; letter-spacing: -0.035em; }
+      .c03-forte { font-weight: 800; color: #86B6EF; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="c03" data-start="0" data-duration="3.35" data-width="1920" data-height="1080">
+      <div id="c03-cena">
+        <div id="c03-veu"></div>
+        <div id="c03-bloco">
+          <span class="c03-linha">
+            <span class="c03-mascara" data-layout-allow-overflow><span id="c03-w1" class="c03-p">constância</span></span>
+          </span>
+          <span class="c03-linha">
+            <span class="c03-mascara" data-layout-allow-overflow><span id="c03-w2" class="c03-p">ganha de</span></span>
+          </span>
+          <span class="c03-linha">
+            <span class="c03-mascara" data-layout-allow-overflow><span id="c03-w3" class="c03-p c03-forte">intensidade.</span></span>
+          </span>
+        </div>
+      </div>
+    </div>
+    <script>
+      // Constância 36,71 · ganha 37,35 · intensidade 37,95 (menos 36,60 s). Fica até o fim do vídeo.
+      const tl = gsap.timeline({ paused: true });
+      const entra = { yPercent: 0, opacity: 1, duration: 0.55, ease: "expo.out" };
+      tl.fromTo("#c03-veu", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" }, 0)
+        .fromTo("#c03-w1", { yPercent: 105, opacity: 0 }, entra, 0.08)
+        .fromTo("#c03-w2", { yPercent: 105, opacity: 0 }, entra, 0.72)
+        .fromTo("#c03-w3", { yPercent: 105, opacity: 0 }, entra, 1.32);
+      window.__timelines["c03"] = tl;
+    </script>
+  </body>
+</html>

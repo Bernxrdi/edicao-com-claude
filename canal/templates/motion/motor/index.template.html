@@ -1,0 +1,141 @@
+<!doctype html>
+<!-- Modelo do motor próprio (11/10/2026). Copiar pra pasta do projeto do vídeo como index.html,
+     junto com motion.js e a pasta fontes/ (copiada de canal/templates/fontes/).
+     O filme é uma função pura do tempo: window.seek(t) pinta o quadro t. Sem transição de CSS,
+     sem timer, sem estado carregado de um quadro pro outro, sem Math.random (usar M.rng).
+     Aberto no navegador, toca sozinho em loop (prévia). No render, quem anda no tempo é o render.mjs.
+     As cenas abaixo são exemplo: a frase na regra da casa e um contêiner que nunca corta. -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>filme</title>
+<style>
+  @font-face { font-family: Manrope; font-weight: 300; src: url(fontes/Manrope-Light.ttf); }
+  @font-face { font-family: Manrope; font-weight: 600; src: url(fontes/Manrope-SemiBold.ttf); }
+  @font-face { font-family: Manrope; font-weight: 800; src: url(fontes/Manrope-ExtraBold.ttf); }
+  html, body { margin: 0; background: #0B0B0B; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script src="motion.js"></script>
+<script>
+// ---------- marca (da BASE: trocar pelo design-guide da marca do vídeo) ----------
+const COR = { papel: '#F6F5F2', papel2: '#F0EFEC', card: '#FCFCFB', borda: '#E4E2DC',
+              tinta: '#0B0B0B', apoio: '#52514E', azul: '#1C5CAB', azul50: '#EDF2F8' };
+const FONTE = 'Manrope';
+window.DUR = 6;
+
+// ---------- formato: as cenas se desenham contra o layout, nunca contra pixel fixo ----------
+const FORMATOS = { '9x16': [1080, 1920], '4x5': [1080, 1350], '1x1': [1080, 1080], '16x9': [1920, 1080] };
+const q = new URLSearchParams(location.search);
+const [W, H] = FORMATOS[q.get('formato') || '9x16'];
+const L = {
+  W, H, cx: W / 2, cy: H / 2,
+  margem: Math.round(Math.min(W, H) * 0.08),
+  u: Math.min(W, H) / 1080,              // 1 unidade = 1 px no lado curto de 1080
+  vertical: H > W,
+};
+const cv = document.getElementById('c');
+cv.width = W; cv.height = H;
+const g = cv.getContext('2d');
+
+// Fonte carregada antes do primeiro quadro (texto em canvas não espera sozinho).
+window.pronto = Promise.all(['300', '600', '800'].map((p) => document.fonts.load(`${p} 64px ${FONTE}`)));
+
+// ---------- ajudantes de desenho ----------
+function caixa(x, y, w, h, r, cor) {
+  g.beginPath(); g.roundRect(x - w / 2, y - h / 2, w, h, r); g.fillStyle = cor; g.fill();
+}
+// Mistura duas cores hex (a cor muda junto com a forma, nunca de golpe).
+function mistura(a, b, p) {
+  const n = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const [x, y] = [n(a), n(b)];
+  return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * p)).join(',')})`;
+}
+// Frase da casa: caixa baixa, palavra-chave em 800 na cor de destaque. "*palavra*" marca a chave.
+function frase(txt, x, y, tam, alpha = 1) {
+  const partes = txt.split(/(\*[^*]+\*)/).filter(Boolean);
+  const medidas = partes.map((p) => {
+    const chave = p.startsWith('*'); const s = chave ? p.slice(1, -1) : p;
+    g.font = `${chave ? 800 : 300} ${tam}px ${FONTE}`;
+    return { s, chave, w: g.measureText(s).width };
+  });
+  let px = x - medidas.reduce((a, m) => a + m.w, 0) / 2;
+  g.globalAlpha = alpha; g.textBaseline = 'middle';
+  for (const m of medidas) {
+    g.font = `${m.chave ? 800 : 300} ${tam}px ${FONTE}`;
+    g.fillStyle = m.chave ? COR.azul : COR.tinta;
+    g.fillText(m.s, px, y); px += m.w;
+  }
+  g.globalAlpha = 1;
+}
+function cursor(x, y, aperto = 0) {
+  g.save(); g.translate(x, y); g.scale(1 - aperto * 0.15, 1 - aperto * 0.15);
+  g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 46 * L.u); g.lineTo(13 * L.u, 34 * L.u); g.lineTo(32 * L.u, 34 * L.u); g.closePath();
+  g.fillStyle = COR.tinta; g.strokeStyle = COR.card; g.lineWidth = 3 * L.u; g.fill(); g.stroke();
+  g.restore();
+}
+
+// ---------- cenas (uma por plano; o Claude acrescenta aqui) ----------
+const CENAS = [
+  { de: 0, ate: 2.2, desenha(t) {                      // gancho: a frase entra palavra a palavra
+      const e = M.entra(t, 0.1, { tipo: 'pesada', dist: 60 * L.u });
+      const s = M.sai(t, 1.95);
+      g.save(); g.filter = `blur(${e.blur}px)`;
+      frase('o dinheiro *sobra*', L.cx, L.cy + e.y + s.y, 120 * L.u, Math.min(e.alpha, s.alpha));
+      g.restore();
+  }},
+  { de: 2.0, ate: 6, desenha(t) {                      // um contêiner que nunca corta: botão → cartão → check
+      const k = [[0, 0], [0.9, 1], [2.3, 2]];          // estados no tempo (em batidas, quando tiver beats.json)
+      const w = M.track(t, k.map(([tt, i]) => [tt, [360, 760, 200][i] * L.u]), 'ui');
+      const h = M.track(t, k.map(([tt, i]) => [tt, [120, 520, 200][i] * L.u]), 'padrao');
+      const r = M.track(t, k.map(([tt, i]) => [tt, [60, 44, 100][i] * L.u]), 'padrao');
+      const pc = M.track(t, [[0, 0], [0.9, 1], [2.3, 0]], 'padrao');   // a cor também muda com mola
+      const cor = mistura(COR.azul, COR.card, M.clamp(pc));
+      const e = M.entra(t, 0, { tipo: 'ui', dist: 30 * L.u });
+      caixa(L.cx, L.cy + e.y, w, h, r, cor);
+      // conteúdo de cada estado: entra depois que a forma começa a mudar, sai antes da próxima
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      let a = M.troca(t, 0, 0.9);
+      g.globalAlpha = a; g.fillStyle = COR.card; g.font = `800 ${44 * L.u}px ${FONTE}`;
+      g.fillText('lançar', L.cx, L.cy + e.y);
+      a = M.troca(t, 1.15, 2.3);                       // espera a forma crescer: texto nunca maior que o contêiner
+      g.globalAlpha = a; g.fillStyle = COR.apoio; g.font = `600 ${36 * L.u}px ${FONTE}`;
+      g.fillText('mercado', L.cx, L.cy - 120 * L.u);
+      g.fillStyle = COR.tinta; g.font = `800 ${110 * L.u}px ${FONTE}`;
+      g.fillText('R$ 182,40', L.cx, L.cy + 10 * L.u);
+      a = M.troca(t, 2.3, 9);
+      g.globalAlpha = a; g.strokeStyle = COR.card; g.lineWidth = 16 * L.u; g.lineCap = 'round'; g.lineJoin = 'round';
+      g.beginPath(); g.moveTo(L.cx - 42 * L.u, L.cy); g.lineTo(L.cx - 10 * L.u, L.cy + 32 * L.u); g.lineTo(L.cx + 48 * L.u, L.cy - 34 * L.u); g.stroke();
+      g.globalAlpha = 1; g.textAlign = 'left';
+      // o cursor conduz cada mudança (um toque antes de cada estado) e sai logo de cima do conteúdo
+      const cxk = M.track(t, [[0, L.cx + 260 * L.u], [0.35, L.cx + 40 * L.u], [1.0, L.cx + 300 * L.u], [1.95, L.cx + 330 * L.u]], 'ui');
+      const cyk = M.track(t, [[0, L.cy + 330 * L.u], [0.35, L.cy + 20 * L.u], [1.0, L.cy + 330 * L.u], [1.95, L.cy + 230 * L.u]], 'ui');
+      const aperto = Math.max(0, 1 - Math.abs(t - 0.8) * 8, 1 - Math.abs(t - 2.2) * 8);
+      if (t < 3.2) cursor(cxk, cyk, aperto);
+  }},
+];
+
+function desenha(t) {
+  g.fillStyle = COR.papel; g.fillRect(0, 0, W, H);
+  // luz no mesmo tom, de cima (regra 4a: fundo neutro com degradê de luz, nunca degradê colorido)
+  const luz = g.createRadialGradient(L.cx, -H * 0.1, 0, L.cx, -H * 0.1, H * 0.9);
+  luz.addColorStop(0, 'rgba(255,255,255,0.55)'); luz.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = luz; g.fillRect(0, 0, W, H);
+  for (const c of CENAS) if (t >= c.de && t < c.ate) c.desenha(t - c.de);
+  // grão leve, com semente fixa por quadro (sai igual em todo render)
+  const r = M.rng(Math.floor(t * 60) + 1); g.fillStyle = 'rgba(0,0,0,0.035)';
+  for (let i = 0; i < 900; i++) g.fillRect(r() * W, r() * H, 2, 2);
+}
+window.seek = (t) => { desenha(t); return true; };
+
+// prévia no navegador comum; no render (?render=1) fica parada esperando o seek
+if (!q.has('render')) window.pronto.then(() => {
+  const t0 = performance.now();
+  (function loop() { desenha(((performance.now() - t0) / 1000) % window.DUR); requestAnimationFrame(loop); })();
+});
+</script>
+</body>
+</html>

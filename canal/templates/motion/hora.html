@@ -1,0 +1,108 @@
+<!doctype html>
+<!-- Cartela de hora do vlog (18/10/2026, pedido dele: "tela preta com contagem da hora" entre uma cena e
+     outra). Motor próprio (motor/): o quadro t é função pura do tempo. Cada dígito rola pra frente, como
+     relógio de placa, da hora da cena anterior até a hora da cena que vem; o dia embaixo, em caixa baixa.
+     Quem gera uma por cena é o scripts/cartelas-hora.py (troca a linha do CFG), e o canal.py render
+     encaixa a cartela entre os trechos ("cartela" no plano), com o fade pro preto antes e depois. -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>hora</title>
+<style>
+  @font-face { font-family: Manrope; font-weight: 600; src: url(fontes/Manrope-SemiBold.ttf); }
+  @font-face { font-family: Manrope; font-weight: 800; src: url(fontes/Manrope-ExtraBold.ttf); }
+  html, body { margin: 0; background: #0B0B0B; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script src="motion.js"></script>
+<script>
+const CFG = /*CFG*/{ "hora": "17:03", "antes": "16:16", "dia": "terça" }/*FIM*/;
+// tema escuro de exemplo (o kit troca pelas cores do config.json): papel no texto, azul claro de destaque
+const COR = { fundo: '#0B0B0B', papel: '#F6F5F2', azul: '#86B6EF' };
+const FONTE = 'Manrope';
+window.DUR = 2.1;
+
+const FORMATOS = { '9x16': [1080, 1920], '16x9': [1920, 1080], '16x9-4k': [3840, 2160] };
+const q = new URLSearchParams(location.search);
+const [W, H] = FORMATOS[q.get('formato') || '16x9-4k'];
+const L = { W, H, cx: W / 2, cy: H / 2, u: Math.min(W, H) / 1080 };
+const cv = document.getElementById('c');
+cv.width = W; cv.height = H;
+const g = cv.getContext('2d');
+window.pronto = Promise.all(['600', '800'].map((p) => document.fonts.load(`${p} 64px ${FONTE}`)));
+
+// dígitos: [dezena da hora, unidade da hora, dezena do minuto, unidade do minuto] e a base de cada um
+const BASES = [3, 10, 6, 10];
+const digitos = (s) => s.replace(':', '').split('').map(Number);
+const ALVO = digitos(CFG.hora);
+const DE = CFG.antes ? digitos(CFG.antes) : ALVO.map((d, k) => (d - 3 + BASES[k] * 2) % BASES[k]);
+const PASSOS = ALVO.map((d, k) => (d - DE[k] + BASES[k]) % BASES[k]);
+// cada dígito começa a rolar um pouco depois do anterior; mola com um fio de folga, de ponteiro mecânico
+const INICIO = [0.20, 0.27, 0.34, 0.41];
+const MOLA_DIGITO = [210, 21];
+const ASSENTA = INICIO.map((i) => i + 0.42);   // quando o dígito para (o tique)
+window.SONS = [{ t: 0.06, tipo: 'whoosh', vol: 0.35 },
+  ...ASSENTA.filter((_, k) => PASSOS[k]).map((t) => ({ t, tipo: 'tique', vol: 0.55 }))];
+
+const TAM = 300 * L.u;            // altura do número
+function desenha(t) {
+  g.fillStyle = COR.fundo; g.fillRect(0, 0, W, H);
+  const e = M.entra(t, 0.08, { tipo: 'pesada', dist: 46 * L.u, blur: 14 * L.u });
+  const s = M.sai(t, 1.74, 0.22);
+  const alpha = Math.min(e.alpha, s.alpha), dy = e.y + s.y;
+
+  g.font = `800 ${TAM}px ${FONTE}`;
+  g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+  const cel = Math.max(...'0123456789'.split('').map((d) => g.measureText(d).width)) * 0.96;
+  const dois = g.measureText(':').width * 1.25;
+  const larg = cel * 4 + dois;
+  const x0 = L.cx - larg / 2;
+  const alto = g.measureText('0').actualBoundingBoxAscent;   // altura do dígito
+  const base = L.cy + alto * 0.42 + dy;         // linha de base dos dígitos (o centro ótico fica um pouco acima)
+  const janela = [base - alto * 1.1, alto * 1.2];   // só o dígito aparece; o que rola por fora some
+  const passo = janela[1] * 1.02;               // distância entre um dígito e o próximo na rolagem
+
+  g.save();
+  g.globalAlpha = alpha;
+  g.filter = e.blur > 0.3 ? `blur(${e.blur}px)` : 'none';
+  const xs = [x0 + cel / 2, x0 + cel * 1.5, x0 + cel * 2.5 + dois, x0 + cel * 3.5 + dois];
+  for (let k = 0; k < 4; k++) {
+    const v = DE[k] + PASSOS[k] * M.spring(t - INICIO[k], ...MOLA_DIGITO);
+    const n = Math.floor(v), frac = v - n;
+    // janela do dígito: o que rola por fora some (máscara), sem moldura nenhuma
+    g.save();
+    g.beginPath(); g.rect(xs[k] - cel / 2, janela[0], cel, janela[1]); g.clip();
+    g.fillStyle = COR.papel;
+    g.fillText(String(((n % BASES[k]) + BASES[k]) % BASES[k]), xs[k], base - frac * passo);
+    if (frac > 0.001) g.fillText(String((n + 1) % BASES[k]), xs[k], base + (1 - frac) * passo);
+    g.restore();
+  }
+  g.fillStyle = COR.azul;
+  g.fillText(':', x0 + cel * 2 + dois / 2, base - alto * 0.04);
+
+  // o dia, embaixo, entra logo depois do número
+  const e2 = M.entra(t, 0.22, { tipo: 'padrao', dist: 22 * L.u, blur: 8 * L.u });
+  g.globalAlpha = Math.min(e2.alpha, s.alpha) * 0.72;
+  g.filter = e2.blur > 0.3 ? `blur(${e2.blur}px)` : 'none';
+  g.font = `600 ${60 * L.u}px ${FONTE}`;
+  g.letterSpacing = `${0.14 * 60 * L.u}px`;
+  g.fillStyle = COR.papel;
+  g.fillText(CFG.dia, L.cx + 0.07 * 60 * L.u, base + 140 * L.u + e2.y + s.y);
+  g.restore();
+
+  // grão leve, com semente fixa por quadro
+  const r = M.rng(Math.floor(t * 60) + 7); g.fillStyle = 'rgba(255,255,255,0.022)';
+  for (let i = 0; i < 2400; i++) g.fillRect(r() * W, r() * H, 2 * L.u, 2 * L.u);
+}
+window.seek = (t) => { desenha(t); return true; };
+
+if (!q.has('render')) window.pronto.then(() => {
+  const t0 = performance.now();
+  (function loop() { desenha(((performance.now() - t0) / 1000) % window.DUR); requestAnimationFrame(loop); })();
+});
+</script>
+</body>
+</html>

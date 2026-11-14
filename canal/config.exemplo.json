@@ -1,0 +1,8 @@
+{
+  "nome": "seu nome",
+  "arroba": "@seuperfil",
+  "temas": ["vida", "trabalho", "ideias"],
+  "pasta_videos": "~/Movies/edicao-com-claude",
+  "palavra_erro": "pato amarelo",
+  "cores": {"fundo": "#0B0B0B", "texto": "#F6F5F2", "destaque": "#86B6EF"}
+}

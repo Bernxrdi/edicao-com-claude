@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <!-- MODELO frase-lateral · frase de arte em até 3 linhas (peso 300, palavra-chave 800 azul claro), uma linha
+         por palavra falada, do lado livre. Véu tinta de 0,8 na borda: abaixo disso some no céu claro.
+         Trocar: o id c02, as linhas, data-duration e os tempos (palavra menos início da cartela). -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Manrope"; font-weight: 300; src: url("fontes/Manrope-Light.ttf"); }
+      @font-face { font-family: "Manrope"; font-weight: 800; src: url("fontes/Manrope-ExtraBold.ttf"); }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "Manrope", sans-serif; }
+      #c02-cena { position: absolute; inset: 0; }
+      #c02-veu {
+        position: absolute; inset: 0;
+        background: linear-gradient(270deg, rgba(11, 11, 11, 0.8) 0%, rgba(11, 11, 11, 0.58) 38%, rgba(11, 11, 11, 0) 68%);
+      }
+      #c02-bloco {
+        position: absolute; right: 160px; top: 0; bottom: 0; width: 760px;
+        display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+      }
+      .c02-linha { display: block; white-space: nowrap; }
+      .c02-mascara { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: 0.08em; }
+      .c02-p { display: inline-block; color: #F6F5F2; font-weight: 300; font-size: 104px; line-height: 1.04; letter-spacing: -0.035em; }
+      .c02-forte { font-weight: 800; color: #86B6EF; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="c02" data-start="0" data-duration="4.9" data-width="1920" data-height="1080">
+      <div id="c02-cena">
+        <div id="c02-veu"></div>
+        <div id="c02-bloco">
+          <span class="c02-linha">
+            <span class="c02-mascara" data-layout-allow-overflow><span id="c02-w1" class="c02-p">disciplina</span></span>
+          </span>
+          <span class="c02-linha">
+            <span class="c02-mascara" data-layout-allow-overflow><span id="c02-w2" class="c02-p">não é</span></span>
+          </span>
+          <span class="c02-linha">
+            <span class="c02-mascara" data-layout-allow-overflow><span id="c02-w3" class="c02-p c02-forte">motivação.</span></span>
+          </span>
+        </div>
+      </div>
+    </div>
+    <script>
+      // Cada palavra entra na hora em que ele fala (transcricao.json da v2, menos 21,10 s).
+      const tl = gsap.timeline({ paused: true });
+      const entra = { yPercent: 0, opacity: 1, duration: 0.55, ease: "expo.out" };
+      tl.fromTo("#c02-veu", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.out" }, 0)
+        .fromTo("#c02-w1", { yPercent: 105, opacity: 0 }, entra, 0.06)
+        .fromTo("#c02-w2", { yPercent: 105, opacity: 0 }, entra, 0.62)
+        .fromTo("#c02-w3", { yPercent: 105, opacity: 0 }, entra, 1.0)
+        .to("#c02-bloco", { y: -28, opacity: 0, duration: 0.4, ease: "power2.in" }, 4.4)
+        .to("#c02-veu", { opacity: 0, duration: 0.4, ease: "power1.in" }, 4.45);
+      window.__timelines["c02"] = tl;
+    </script>
+  </body>
+</html>
